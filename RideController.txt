@@ -1,0 +1,18 @@
+package com.example.demo;
+
+@RestController
+@RequestMapping("/rides")
+public class RideController {
+    @Autowired
+    private RideService rideService;
+
+    @PostMapping("/book")
+    public Ride bookRide(@RequestBody Ride ride) {
+        return rideService.bookRide(ride);
+    }
+
+    @GetMapping("/track/{id}")
+    public Ride trackRide(@PathVariable Long id) {
+        return rideService.getRide(id);
+    }
+}

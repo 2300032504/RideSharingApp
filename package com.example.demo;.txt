@@ -1,0 +1,13 @@
+package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class RidesharingAppApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(RidesharingAppApplication.class, args);
+	}
+
+}

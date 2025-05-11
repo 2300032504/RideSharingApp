@@ -1,0 +1,21 @@
+package com.example.demo;
+
+@Service
+public class RideService {
+    @Autowired
+    private RideRepository rideRepo;
+
+    public Ride bookRide(Ride ride) {
+        ride.setStatus("REQUESTED");
+        ride.setFare(estimateFare(ride.getOrigin(), ride.getDestination()));
+        return rideRepo.save(ride);
+    }
+
+    public Ride getRide(Long id) {
+        return rideRepo.findById(id).orElse(null);
+    }
+
+    private double estimateFare(String origin, String destination) {
+        return 50.0; // Dummy logic
+    }
+}
