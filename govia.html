@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Ride Sharing App - Role Based Frontend with Subscription and Password</title>
+<style>
+  /* Reset */
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0; padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f4f8;
+    color: #333;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    user-select: none;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  #app {
+    width: 100%;
+    max-width: 350px;
+    max-height: 600px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: #007bff;
+    color: white;
+    padding: 16px 20px;
+    font-size: 1.3rem;
+    font-weight: 700;
+    text-align: center;
+  }
+  main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    scroll-behavior: smooth;
+  }
+  .hidden {
+    display: none !important;
+  }
+  button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    width: 100%;
+    margin: 10px 0 0 0;
+    transition: background-color 0.3s ease;
+  }
+  button:hover {
+    background-color: #0056b3;
+  }
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1.5px solid #ccc;
+    margin-top: 12px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+  label {
+    font-weight: 600;
+    margin-top: 16px;
+    display: block;
+  }
+  h2 {
+    margin-top: 0;
+    font-weight: 700;
+    color: #007bff;
+    margin-bottom: 12px;
+  }
+  .fare-estimate, .payment-status, .info-msg, .login-error {
+    margin-top: 14px;
+    font-weight: 700;
+    color: #004085;
+    padding: 10px;
+    background: #d1e7ff;
+    border-radius: 8px;
+  }
+  .login-error {
+    background: #f8d7da;
+    color: #842029;
+  }
+  .ride-history, .admin-rides-list {
+    margin-top: 16px;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1.5px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+  }
+  .ride-card, .ride-row {
+    padding: 10px 14px;
+    border-bottom: 1px solid #ddd;
+  }
+  .ride-card:last-child, .ride-row:last-child {
+    border-bottom: none;
+  }
+  .ride-card strong, .ride-row strong {
+    color: #007bff;
+  }
+  .rating-stars {
+    color: #ffc107;
+    font-size: 16px;
+    margin-top: 6px;
+  }
+  .rating-stars span {
+    margin-right: 2px;
+  }
+  .role-select {
+    margin-top: 24px;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  /* Simple table styles for admin rides */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+  th, td {
+    padding: 6px 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+  }
+  th {
+    background-color: #007bff;
+    color: white;
+    position: sticky;
+    top: 0;
+  }
+  /* Scrollbar for ride history/admin table */
+  .ride-history::-webkit-scrollbar,
+  .admin-rides-list::-webkit-scrollbar {
+    width: 6px;
+  }
+  .ride-history::-webkit-scrollbar-thumb,
+  .admin-rides-list::-webkit-scrollbar-thumb {
+    background-color: #007bffaa;
+    border-radius: 3px;
+  }
+  /* Animation for driver marker */
+  @keyframes pulse {
+    0% {
+      transform: rotate(-45deg) scale(1);
+      opacity: 1;
+    }
+    70% {
+      transform: rotate(-45deg) scale(1.3);
+      opacity: 0;
+    }
+    100% {
+      transform: rotate(-45deg) scale(1);
+      opacity: 0;
+    }
+  }
+  /* Driver location marker style */
+  #driverMap .marker {
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    background-color: #007bff;
+    border-radius: 50% 50% 50% 0;
+    transform: rotate(-45deg);
+    box-shadow: 0 0 10px #007bffaa;
+    animation: pulse 2s infinite;
+  }
+  #driverMap .marker > div {
+    width: 12px;
+    height: 12px;
+    background-color: white;
+    border-radius: 50%;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+  }
+  /* SR Only */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    left: -9999px;
+    top: auto;
+    overflow: hidden;
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>GO-VIA</header>
+  <main>
+
+    <!-- Login Screen -->
+    <section id="loginScreen">
+      <h2>Welcome! Select Role and Log In</h2>
+      <select id="roleSelect" class="role-select" aria-label="Select your role">
+        <option value="" disabled selected>Choose role...</option>
+        <option value="user">User (Passenger)</option>
+        <option value="admin">Admin</option>
+      </select>
+      <label for="passwordInput" style="margin-top: 16px;">Password</label>
+      <input type="password" id="passwordInput" aria-label="Enter password" autocomplete="off" />
+      <div id="loginError" class="login-error hidden" role="alert" aria-live="assertive"></div>
+      <button id="btnLogin" disabled>Login</button>
+    </section>
+
+    <!-- User Section -->
+    <section id="userSection" class="hidden" aria-label="User Interface">
+      <h2>Book Your Ride</h2>
+      <form id="rideForm" aria-label="Ride booking form">
+        <label for="pickupInput">Pickup Location</label>
+        <input id="pickupInput" name="pickup" type="text" placeholder="Enter pickup address" required autocomplete="off" />
+        
+        <label for="dropoffInput">Dropoff Location</label>
+        <input id="dropoffInput" name="dropoff" type="text" placeholder="Enter dropoff address" required autocomplete="off" />
+
+        <label for="rideTypeSelect">Ride Type</label>
+        <select id="rideTypeSelect" name="rideType" required>
+          <option value="" disabled selected>Select ride type</option>
+          <option value="standard">Standard</option>
+          <option value="premium">Premium (+30%)</option>
+          <option value="shared">Shared (-20%)</option>
+        </select>
+
+        <label for="subscriptionPlanSelect">Subscription Plan</label>
+        <select id="subscriptionPlanSelect" name="subscriptionPlan" required>
+          <option value="" disabled selected>Select subscription plan</option>
+          <option value="basic" data-multiplier="1.0">Basic - ₹0/month</option>
+          <option value="standard" data-multiplier="0.9">Standard - ₹199/month (10% off fare)</option>
+          <option value="premium" data-multiplier="0.8">Premium - ₹399/month (20% off fare)</option>
+        </select>
+
+        <button type="submit" id="estimateBtn">Estimate Fare</button>
+      </form>
+
+      <div id="fareEstimate" class="fare-estimate" aria-live="polite"></div>
+      <div id="paymentSection" class="payment-status" aria-live="polite"></div>
+
+      <section id="driverLocation" aria-label="Driver live location map" style="margin-top:20px;">
+        <h3>Driver Location</h3>
+        <div id="driverMap" style="width:100%;height:140px; background: linear-gradient(135deg, #a0c4ff, #caf0f8); border-radius: 12px; position: relative; box-shadow: inset 0 0 20px rgba(0,123,255,0.2);">
+          <div class="marker" title="Driver location" style="top:40%; left:60%;">
+            <div></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="ride-history" aria-label="Ride history">
+        <h2>Your Ride History</h2>
+        <div id="rideHistoryList">
+          <p>No rides booked yet.</p>
+        </div>
+      </section>
+
+      <section aria-label="Rate your last ride" style="margin-top: 16px;">
+        <h2>Rate Your Last Ride</h2>
+        <div id="rateRideDiv" tabindex="0" aria-label="Rate your last ride stars">
+          <label for="ratingStars">Driver rating:</label>
+          <div id="ratingStars" role="radiogroup" aria-label="Driver rating stars" style="font-size: 24px; user-select:none;">
+            <span class="star" data-value="1" role="radio" aria-checked="false" tabindex="0">&#9733;</span>
+            <span class="star" data-value="2" role="radio" aria-checked="false" tabindex="-1">&#9733;</span>
+            <span class="star" data-value="3" role="radio" aria-checked="false" tabindex="-1">&#9733;</span>
+            <span class="star" data-value="4" role="radio" aria-checked="false" tabindex="-1">&#9733;</span>
+            <span class="star" data-value="5" role="radio" aria-checked="false" tabindex="-1">&#9733;</span>
+          </div>
+          <button id="submitRatingBtn" disabled style="margin-top:10px; background:#28a745;">Submit Rating</button>
+        </div>
+      </section>
+
+      <button id="btnLogoutUser" style="margin-top: 24px; background: #dc3545;">Logout</button>
+    </section>
+
+    <!-- Admin Section -->
+    <section id="adminSection" class="hidden" aria-label="Admin Interface">
+      <h2>Admin Dashboard</h2>
+      <div style="margin-bottom:12px;">
+        <button id="btnRefreshAdmin" style="width: 100%; background:#007bff; font-weight: 700;">Refresh Data</button>
+      </div>
+
+      <section aria-label="Ongoing Rides" class="admin-rides-list" style="font-size:0.9rem;">
+        <h3>Ongoing Rides</h3>
+        <table aria-describedby="ongoingDesc" style="width:100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th>Ride ID</th>
+              <th>Passenger</th>
+              <th>Driver</th>
+              <th>Pickup</th>
+              <th>Dropoff</th>
+              <th>Status</th>
+              <th>Plan</th>
+            </tr>
+          </thead>
+          <tbody id="adminRideTableBody">
+            <tr><td colspan="7" style="text-align:center; padding:15px;">Loading...</td></tr>
+          </tbody>
+        </table>
+        <div id="ongoingDesc" class="sr-only">Table listing all ongoing rides</div>
+      </section>
+
+      <section aria-label="Driver Ratings Summary" style="margin-top: 20px;">
+        <h3>Driver Ratings Summary</h3>
+        <p id="driverRatingSummary" style="font-weight:700; color:#212529;">No ratings yet.</p>
+      </section>
+
+      <section aria-label="Statistics" style="margin-top: 20px;">
+        <h3>Statistics</h3>
+        <p>Total rides completed: <strong><span id="totalRidesCompleted">0</span></strong></p>
+        <p>Total revenue: ₹<strong><span id="totalRevenue">0.00</span></strong></p>
+      </section>
+
+      <button id="btnLogoutAdmin" style="margin-top: 28px; background: #dc3545;">Logout</button>
+    </section>
+
+  </main>
+</div>
+
+<script>
+(() => {
+  // Elements & state
+  const loginScreen = document.getElementById("loginScreen");
+  const roleSelect = document.getElementById("roleSelect");
+  const btnLogin = document.getElementById("btnLogin");
+  const passwordInput = document.getElementById("passwordInput");
+  const loginError = document.getElementById("loginError");
+
+  const userSection = document.getElementById("userSection");
+  const adminSection = document.getElementById("adminSection");
+
+  const btnLogoutUser = document.getElementById("btnLogoutUser");
+  const btnLogoutAdmin = document.getElementById("btnLogoutAdmin");
+
+  // User elements
+  const rideForm = document.getElementById("rideForm");
+  const fareEstimateDiv = document.getElementById("fareEstimate");
+  const paymentSection = document.getElementById("paymentSection");
+  const driverMap = document.getElementById("driverMap");
+  const rideHistoryList = document.getElementById("rideHistoryList");
+  const ratingStars = document.querySelectorAll("#ratingStars .star");
+  const submitRatingBtn = document.getElementById("submitRatingBtn");
+
+  // Admin elements
+  const btnRefreshAdmin = document.getElementById("btnRefreshAdmin");
+  const adminRideTableBody = document.getElementById("adminRideTableBody");
+  const driverRatingSummary = document.getElementById("driverRatingSummary");
+  const totalRidesCompletedLabel = document.getElementById("totalRidesCompleted");
+  const totalRevenueLabel = document.getElementById("totalRevenue");
+
+  const subscriptionPlanSelect = document.getElementById("subscriptionPlanSelect");
+
+  // State variables
+  let currentRole = null; // "user" or "admin"
+  let rideHistory = []; // Common ride data store
+  let lastRide = null; // For rating
+  let selectedRating = 0;
+
+  // Passwords for demo (in real app use proper auth)
+  const passwords = {
+    user: 'user123',
+    admin: 'admin123'
+  };
+
+  // Enable login button only when role & password present
+  function updateLoginButtonState(){
+    btnLogin.disabled = !(roleSelect.value && passwordInput.value.trim() !== '');
+  }
+  roleSelect.addEventListener("change", updateLoginButtonState);
+  passwordInput.addEventListener("input", updateLoginButtonState);
+
+  btnLogin.addEventListener("click", () => {
+    loginError.classList.add("hidden");
+    const role = roleSelect.value;
+    const pwd = passwordInput.value.trim();
+    if(passwords[role] === pwd){
+      currentRole = role;
+      loginScreen.classList.add("hidden");
+      if(currentRole === 'user'){
+        userSection.classList.remove("hidden");
+        loadUserInterface();
+      } else if(currentRole === 'admin'){
+        adminSection.classList.remove("hidden");
+        loadAdminInterface();
+      }
+      // clear inputs
+      passwordInput.value = '';
+      updateLoginButtonState();
+    } else {
+      loginError.textContent = "Invalid password for selected role.";
+      loginError.classList.remove("hidden");
+    }
+  });
+
+  btnLogoutUser.addEventListener("click", logout);
+  btnLogoutAdmin.addEventListener("click", logout);
+
+  function logout() {
+    currentRole = null;
+    roleSelect.value = "";
+    passwordInput.value = "";
+    btnLogin.disabled = true;
+    loginError.classList.add("hidden");
+    loginScreen.classList.remove("hidden");
+    userSection.classList.add("hidden");
+    adminSection.classList.add("hidden");
+    resetUser();
+    resetAdmin();
+  }
+
+  // ------------- User Interface Logic ------------
+
+  function loadUserInterface(){
+    renderRideHistory();
+    fareEstimateDiv.textContent = "";
+    paymentSection.textContent = "";
+    setRating(0);
+    submitRatingBtn.disabled = true;
+  }
+
+  rideForm.addEventListener("submit", e => {
+    e.preventDefault();
+    fareEstimateDiv.textContent = "";
+    paymentSection.textContent = "";
+    
+    const pickup = rideForm.pickup.value.trim();
+    const dropoff = rideForm.dropoff.value.trim();
+    const rideType = rideForm.rideType.value;
+    const subscriptionPlan = subscriptionPlanSelect.value;
+
+    if(!pickup || !dropoff || !rideType || !subscriptionPlan){
+      fareEstimateDiv.textContent = "Please fill all fields.";
+      return;
+    }
+    if(pickup.toLowerCase() === dropoff.toLowerCase()){
+      fareEstimateDiv.textContent = "Pickup and dropoff cannot be the same.";
+      return;
+    }
+
+    const distance = simulateDistance(pickup, dropoff);
+    let baseFare = estimateFare(distance, 3, 1.5, rideType);
+
+    // Apply subscription multiplier based on plan
+    const planOption = subscriptionPlanSelect.querySelector(`option[value="${subscriptionPlan}"]`);
+    let multiplier = 1;
+    if(planOption && planOption.dataset.multiplier){
+      multiplier = parseFloat(planOption.dataset.multiplier);
+    }
+    const finalFare = baseFare * multiplier;
+
+    fareEstimateDiv.textContent = `Estimated fare for your ride (${distance} km) with ${subscriptionPlan.charAt(0).toUpperCase() + subscriptionPlan.slice(1)} plan: ₹${finalFare.toFixed(2)}`;
+
+    // Save new ride to history with 'Ongoing' status
+    const newRide = {
+      id: 'R' + Date.now(),
+      passenger: "You",
+      driver: randomDriverName(),
+      pickup,
+      dropoff,
+      distance,
+      fare: finalFare,
+      rideType,
+      subscriptionPlan,
+      status: "Ongoing",
+      rating: null,
+      requestedAt: new Date().toISOString()
+    };
+    rideHistory.unshift(newRide);
+    lastRide = newRide;
+    renderRideHistory();
+
+    submitRatingBtn.disabled = true;
+    setRating(0);
+
+    simulatePayment(finalFare);
+
+    updateDriverLocation();
+  });
+
+  // Fare estimation logic (based on base fare and ride type)
+  function estimateFare(distanceKm, baseFare=3, perKm=1.5, rideType = "standard") {
+    let multiplier = 1;
+    if(rideType === "premium") multiplier = 1.3;
+    if(rideType === "shared") multiplier = 0.8;
+    return (baseFare + distanceKm * perKm) * multiplier;
+  }
+
+  // Fake distance calculation
+  function simulateDistance(pickup, dropoff) {
+    return Math.floor(Math.random() * 15) + 1; // 1-15 km
+  }
+
+  function randomDriverName(){
+    const drivers = ['Ravi Kumar', 'Sunil Singh', 'Amit Patel', 'Manoj Sharma', 'Deepak Verma', 'Rajesh Gupta'];
+    return drivers[Math.floor(Math.random()*drivers.length)];
+  }
+
+  // Render ride history for user
+  function renderRideHistory(){
+    if(rideHistory.length === 0){
+      rideHistoryList.innerHTML = "<p>You have no rides yet.</p>";
+      return;
+    }
+    let html = "";
+    rideHistory.forEach(ride => {
+      html += `<div class="ride-card" tabindex="0" aria-label="Ride ID ${ride.id}, from ${ride.pickup} to ${ride.dropoff}, fare ₹${ride.fare.toFixed(2)}, status ${ride.status}">
+        <strong>ID:</strong> ${ride.id}<br/>
+        <strong>Pickup:</strong> ${ride.pickup}<br/>
+        <strong>Dropoff:</strong> ${ride.dropoff}<br/>
+        <strong>Plan:</strong> ${ride.subscriptionPlan ? ride.subscriptionPlan.charAt(0).toUpperCase() + ride.subscriptionPlan.slice(1) : 'N/A'}<br/>
+        <strong>Fare:</strong> ₹${ride.fare.toFixed(2)}<br/>
+        <strong>Status:</strong> ${ride.status}<br/>
+        ${ride.rating ? `<div class="rating-stars">${renderStars(ride.rating)}</div>` : ""}
+      </div>`;
+    });
+    rideHistoryList.innerHTML = html;
+  }
+
+  function renderStars(count){
+    let starsHtml = "";
+    for(let i=1; i<=5; i++){
+      starsHtml += i <= count ? "&#9733;" : "&#9734;";
+    }
+    return starsHtml;
+  }
+
+  // Payment simulation
+  function simulatePayment(fare){
+    paymentSection.innerHTML = `
+      <p>Amount to pay: <strong>₹${fare.toFixed(2)}</strong></p>
+      <button id="payNowBtn">Pay Now</button>
+    `;
+    const payBtn = document.getElementById("payNowBtn");
+    payBtn.addEventListener("click", () => {
+      payBtn.disabled = true;
+      payBtn.textContent = "Processing...";
+      setTimeout(() => {
+        paymentSection.innerHTML = `<p style="color:green;">Payment successful! Thank you.</p>`;
+        if(lastRide){
+          lastRide.status = "Completed";
+          renderRideHistory();
+          updateAdminInterfaceFromUser();
+        }
+      }, 1500);
+    });
+  }
+
+  // Driver location marker moving simulation
+  function updateDriverLocation(){
+    const marker = driverMap.querySelector(".marker");
+    const top = Math.floor(Math.random()*70) + 15;
+    const left = Math.floor(Math.random()*70) + 15;
+    if(marker){
+      marker.style.top = top + "%";
+      marker.style.left = left + "%";
+    }
+  }
+  setInterval(() => {
+    if(currentRole === 'user' && !userSection.classList.contains('hidden')) {
+      updateDriverLocation();
+    }
+  }, 4000);
+
+  // Rating stars interaction for user
+  ratingStars.forEach((star, i) => {
+    star.addEventListener("click", () => setRating(i+1));
+    star.addEventListener("keydown", (e) => {
+      if(e.key === "ArrowRight" || e.key === "ArrowUp"){
+        e.preventDefault();
+        const nextIdx = i +1 < ratingStars.length ? i+1 : 0;
+        ratingStars[nextIdx].focus();
+      }
+      if(e.key === "ArrowLeft" || e.key === "ArrowDown"){
+        e.preventDefault();
+        const prevIdx = i -1 >= 0 ? i -1 : ratingStars.length-1;
+        ratingStars[prevIdx].focus();
+      }
+      if(e.key === "Enter" || e.key === " "){
+        e.preventDefault();
+        setRating(i+1);
+      }
+    });
+  });
+
+  function setRating(value){
+    selectedRating = value;
+    ratingStars.forEach((star, idx) => {
+      star.setAttribute("aria-checked", idx < value ? "true" : "false");
+      star.style.color = idx < value ? "#ffc107" : "#ddd";
+    });
+    submitRatingBtn.disabled = false;
+  }
+
+  submitRatingBtn.addEventListener("click", () => {
+    if(selectedRating > 0 && lastRide && lastRide.status === "Completed"){
+      lastRide.rating = selectedRating;
+      alert(`Thanks for rating your driver ${selectedRating} star${selectedRating>1?'s':''}!`);
+      submitRatingBtn.disabled = true;
+      renderRideHistory();
+      updateAdminInterfaceFromUser();
+    }
+  });
+
+  function resetUser(){
+    rideHistory = [];
+    lastRide = null;
+    selectedRating = 0;
+    fareEstimateDiv.textContent = "";
+    paymentSection.textContent = "";
+    ratingStars.forEach(star => star.style.color = "#ddd");
+    submitRatingBtn.disabled = true;
+    rideHistoryList.innerHTML = "<p>You have no rides yet.</p>";
+    rideForm.reset();
+  }
+
+  // ------------- Admin Interface Logic --------------
+
+  let adminRideHistory;
+
+  function loadAdminInterface(){
+    adminRideHistory = rideHistory.slice();
+    if(adminRideHistory.length < 5) {
+      adminRideHistory = adminRideHistory.concat(generateDummyAdminRides(5 - adminRideHistory.length));
+    }
+    renderAdminRides();
+    updateAdminStats();
+    updateAdminRatingsSummary();
+  }
+
+  btnRefreshAdmin.addEventListener("click", () => {
+    loadAdminInterface();
+  });
+
+  function renderAdminRides(){
+    adminRideTableBody.innerHTML = "";
+    const ongoingRides = adminRideHistory.filter(r => r.status === "Ongoing");
+    if(ongoingRides.length === 0){
+      adminRideTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:15px;">No ongoing rides</td></tr>`;
+      return;
+    }
+    ongoingRides.forEach(ride => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${ride.id}</td>
+        <td>${ride.passenger}</td>
+        <td>${ride.driver}</td>
+        <td>${ride.pickup}</td>
+        <td>${ride.dropoff}</td>
+        <td>${ride.status}</td>
+        <td>${ride.subscriptionPlan ? ride.subscriptionPlan.charAt(0).toUpperCase() + ride.subscriptionPlan.slice(1) : 'N/A'}</td>
+      `;
+      adminRideTableBody.appendChild(tr);
+    });
+  }
+
+  function updateAdminRatingsSummary(){
+    const rated = adminRideHistory.filter(r => r.rating !== null && r.rating !== undefined);
+    if(rated.length === 0){
+      driverRatingSummary.textContent = "No ratings yet.";
+      return;
+    }
+    const avg = rated.reduce((acc, cur) => acc + cur.rating, 0) / rated.length;
+    driverRatingSummary.textContent = `Average rating: ${avg.toFixed(2)} / 5 from ${rated.length} rides.`;
+  }
+
+  function updateAdminStats(){
+    const completed = adminRideHistory.filter(r => r.status === "Completed");
+    totalRidesCompletedLabel.textContent = completed.length;
+    const revenue = completed.reduce((acc, cur) => acc + cur.fare, 0);
+    totalRevenueLabel.textContent = revenue.toFixed(2);
+  }
+
+  function generateDummyAdminRides(count){
+    const dummyRides = [];
+    const pm = ['Rajesh', 'Sunita', 'Amit', 'Preeti', 'Anil', 'Kavita', 'Suresh', 'Neha', 'Vikram', 'Pooja'];
+    const dm = ['Ravi Kumar', 'Sunil Singh', 'Amit Patel', 'Manoj Sharma', 'Deepak Verma', 'Rajesh Gupta'];
+    const places = [
+      'Connaught Place, Delhi', 'MG Road, Bangalore', 'Marine Drive, Mumbai',
+      'Salt Lake, Kolkata', 'Charminar, Hyderabad', 'Park Street, Kolkata'
+    ];
+    const plans = ['basic','standard','premium'];
+    for(let i=0; i<count; i++){
+      const pickup = places[Math.floor(Math.random()*places.length)];
+      let dropoff;
+      do {
+        dropoff = places[Math.floor(Math.random()*places.length)];
+      } while(dropoff === pickup);
+      const status = Math.random() < 0.4 ? 'Ongoing' : 'Completed';
+      const rating = status === 'Completed' ? Math.floor(Math.random()*5) + 1 : null;
+      const plan = plans[Math.floor(Math.random()*plans.length)];
+      // Apply plan multiplier for fare
+      const baseFare = parseFloat((Math.random()*500 + 100).toFixed(2));
+      const multipliers = { basic: 1, standard: 0.9, premium: 0.8 };
+      const fare = parseFloat((baseFare * multipliers[plan]).toFixed(2));
+
+      dummyRides.push({
+        id: 'R' + (Date.now() + i),
+        passenger: pm[Math.floor(Math.random()*pm.length)],
+        driver: dm[Math.floor(Math.random()*dm.length)],
+        pickup,
+        dropoff,
+        status,
+        rating,
+        fare,
+        subscriptionPlan: plan,
+        requestedAt: new Date(Date.now()- (i*3600000)).toISOString()
+      });
+    }
+    return dummyRides;
+  }
+
+  function resetAdmin(){
+    adminRideTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:15px;">No ongoing rides</td></tr>`;
+    driverRatingSummary.textContent = "No ratings yet.";
+    totalRidesCompletedLabel.textContent = "0";
+    totalRevenueLabel.textContent = "0.00";
+  }
+
+  function updateAdminInterfaceFromUser(){
+    if(currentRole === 'admin'){
+      loadAdminInterface();
+    }
+  }
+
+})();
+</script>
+</body>
+</html>
+
